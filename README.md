@@ -1,4 +1,6 @@
 pynessus-client
 ===============
 
-a nessus client writing with python
+a nessus client wrote with python 
+
+by salutlu
