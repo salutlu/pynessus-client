@@ -162,6 +162,10 @@ class  Report:
     """Report API"""
     def __init__(self, connection=connector()):
         self.conn = connection;
+    
+    def list(self, seq=randint(SEQMIN,SEQMAX)):
+        """report list method """
+        data = {"seq":seq}        
 
 
 
