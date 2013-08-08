@@ -8,13 +8,16 @@ from random import randint
 from connection.connector import connector
 
 import xml.etree.ElementTree as ET
+import time
 
 SEQMIN = 10000
 SEQMAX = 99999
 
+REPROT_DIR = 'c:/Nessus/report'
+
 class  Report:
     """Report API"""
-    def __init__(self, connection=connector()):
+    def __init__(self, connection):
         self.conn = connection;
     
     def list(self, seq=randint(SEQMIN,SEQMAX)):
@@ -54,3 +57,66 @@ class  Report:
             member['totalChecksConsidered'] = host.find('./totalChecksConsidered').text
             retvelue.append(member)
         return retvelue
+    
+    def chapter_list(self, seq=randint(SEQMIN,SEQMAX)):
+        """chapter list method"""
+        data = {"seq":seq}
+        contents = self.conn.call("/chapter/list", data)
+        XSLT = list()
+        items = contents.find("./XSLT")
+        for item in items.getchildren():
+            member = dict()
+            member['fileName'] = item.find('./fileName').text
+            member['readableName'] = item.find('./readableName').text
+            XSLT.append(member)
+        chapters = list()
+        chapterList = contents.find('./chapters')
+        for chapter in chapterList.getchildren():
+            chapters.append(chapter.attrib['value'])
+        formats = list()
+        formatList = contents.find('./formats')
+        for format in formatList.getchildren():
+            formats.append(format.attrib['value'])
+        retvalue = dict()
+        retvalue['XSLT'] = XSLT
+        retvalue['chapters'] = chapters
+        retvalue['formats'] = formats
+        return retvalue
+    
+    def chapter(self, uuid, chapters, format, version='v2'):
+        """chapter method"""
+        data = {'report':uuid, 'chapters':chapters, 'format':format}
+        if version.lower() == 'v1':
+            data[version] = version
+            print(data)
+        response = self.conn.raw_call('/chapter', data)        
+        return self.getReportName(response)
+    
+    def getReportName(self, response):
+        prefix = "url=/file/xslt/download/?fileName=";
+        sufix = "\">";
+        responsestr = response.decode()
+        preind = responsestr.find(prefix)
+        responsestr = responsestr[preind+len(prefix):]
+        sufind = responsestr.find(sufix)
+        return responsestr[:sufind]
+    
+    def fileXsltDownload(self, fileName, path=REPROT_DIR):
+        """file xslt download method"""
+        data = {'fileName':fileName}
+        count = 0
+        while True:
+            resp = self.conn.raw_call('/file/xslt/download', data)
+            if resp.find(b"!doctype")!=-1:
+                time.sleep(4)                
+            else:
+                f = open(path + fileName, 'wb')
+                f.write(resp)
+                f.close()
+                return path + fileName
+            count += 1
+            data['step'] = '2'
+            if count==20: #retry 20 times
+                print('Cannot download report.')
+                break
+        

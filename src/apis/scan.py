@@ -8,7 +8,7 @@ SEQMAX = 99999
 
 class  Scan:
     """Scan API"""
-    def __init__(self, connection=connector()):
+    def __init__(self, connection):
         self.conn = connection;
 
     def new(self, target, policy_id, scan_name, seq=randint(SEQMIN,SEQMAX)):

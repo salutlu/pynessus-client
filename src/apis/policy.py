@@ -10,9 +10,11 @@ from connection.connector import connector
 SEQMIN = 10000
 SEQMAX = 99999
 
+POLICY_DIR = 'c:/Nessus/policy'
+
 class Policy:
     """Scan API"""
-    def __init__(self, connection=connector()):
+    def __init__(self, connection):
         self.conn = connection;
 
     def preferences_list(self, seq=randint(SEQMIN,SEQMAX)):
@@ -27,7 +29,7 @@ class Policy:
             member['value'] = elem.find("./value").text
             retvalue.append(member)
         return retvalue
-    
+
     def list(self, seq=randint(SEQMIN,SEQMAX)):
         """list method"""
         data = {"seq":seq}
@@ -55,7 +57,7 @@ class Policy:
         """add method"""
         print(data)
         if type(data) == type(dict()):
-            data['seq'] = seq            
+            data['seq'] = seq
         else:
             return "error"
         contents = self.conn.call("/policy/add", data)
@@ -67,17 +69,40 @@ class Policy:
         contents = self.conn.call("/policy/edit", data)
         return #todo:
         
-    def download(self, policy_id):
+    def download(self, policy_id, path=POLICY_DIR):
         """policy download method"""
         data = {"policy_id":policy_id}
-        contents = self.conn.call("/policy/download", data)
-        return #todo:
+        contents = self.conn.raw_call("/policy/download", data)
+        path += '/policy' + policy_id + '.xml'
+        f = open(path, "wb")
+        f.write(contents)
+        f.close()
+        return path
         
-    def file_upload(self, Filedata):
+    def file_upload(self, Filedata='Filedata'):
         """file upload method"""
-        data = {}
-        contents = self.conn.call("/file/upload", data)
-        return #todo:
+        boundary = '----WebKitFormBoundaryueTX1Mrc2uXootVI'
+        data = '''----WebKitFormBoundaryueTX1Mrc2uXootVI
+Content-Disposition: form-data; name="Filedata"; filename="policy-1.xml" 
+Content-Type: text/xml
+
+'''
+        f = open("c:/Nessus/policy/policy-1.xml", 'r')
+        content = f.read()
+        f.close()
+        data += content
+        data += '\n----WebKitFormBoundaryueTX1Mrc2uXootVI--'
+        headers = {}#"Content-Type":"multipart/form-data;"} #boundary=---------------------------153501500631101"}        
+        headers['Connection'] = 'keep-alive'
+        headers['Accept'] = 'application/json, text/javascript, */*; q=0.01'        
+        headers['X-Requested-With'] = 'XMLHttpRequest'
+        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.95 Safari/537.36'
+        headers['Content-Type'] = 'multipart/form-data; boundary=----WebKitFormBoundaryueTX1Mrc2uXootVI'
+        headers['Accept-Encoding'] = 'gzip,deflate,sdch'
+        headers['Accept-Language'] = 'zh-CN,zh;q=0.8'
+        headers['Content-Length'] = len(data)
+        contents = self.conn.upload_file_call("/file/upload?json=1", data, headers)        
+        return contents
         
     def file_policy_import(self, file, seq=randint(SEQMIN, SEQMAX)):
         """ policy file import method"""
